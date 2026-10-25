@@ -1,18 +1,23 @@
+using MassTransit;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+
+builder.Services.AddMassTransit(configure =>
+{
+    configure.AddConsumer<Payment.API.Consumers.PaymentStartedEventConsumer>();
+
+    configure.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.ReceiveEndpoint(Shared.Settings.RabbitMqSettings.Payment_PaymentStartedEventQueue, e =>
+            e.ConfigureConsumer<Payment.API.Consumers.PaymentStartedEventConsumer>(context));
+        cfg.Host(builder.Configuration.GetConnectionString("RabbitMQUrl"));
+
+    });
+});
 
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 app.UseHttpsRedirection();
 
